@@ -151,6 +151,8 @@ npm run build
 - Added public `GET /api/v1/event/status` with state, capabilities, server time, event bounds, and freeze metadata.
 - Added CSRF-protected admin lifecycle endpoints for setting times, starting, pausing, resuming, and ending the event; every transition writes an AuditLog row.
 - Added real PostgreSQL/Redis tests for fake-clock states, override precedence, capability mapping, public status, player authorization, and audit rows.
+- Starting an already-ended event now returns HTTP 409 with a clear error; invalid end-before-start ranges return 422.
+- Added `scripts/dev_event.ps1`, an in-memory credential/CSRF-aware admin console for status, start, pause, resume, end, and set-times.
 
 ### How to run
 
@@ -164,8 +166,29 @@ docker compose exec backend pytest tests/ -v
 
 - Migration `0003` applied successfully from `0002`.
 - Ruff: all checks passed.
-- Pytest: 16 tests passed against real PostgreSQL and Redis.
+- Pytest: 19 tests passed against real PostgreSQL and Redis, including CSRF rejection, all lifecycle admin authorization checks, server time, audit actor IDs, and start-after-ended behavior.
+- `alembic heads` reports exactly one head: `0003`.
 - `GET /api/v1/event/status` is public and returns lifecycle state, capabilities, server time, start/end, and freeze metadata.
+
+### What is next
+
+**Phase 3** — Teams: roster, capacity guard, lock on live, and admin swap.
+
+## Phase 2.5 — Frontend lifecycle status (complete)
+
+### What was done
+
+- Added typed event status interfaces and a TanStack Query hook polling every 15 seconds, pausing while the tab is hidden and retaining the last successful response on refetch failure.
+- Replaced the header placeholder with Upcoming, Live, Paused, and Ended status pills.
+- Added the accessible lifecycle banner with schedule countdowns, paused/ended messages, server-time offset handling, and reduced-motion-compatible styling.
+- Added MSW/Vitest coverage for all states, null schedules, server-clock offsets, failed refetch retention, and state-change announcements.
+
+### Frontend verification
+
+- Vitest: 4 files and 19 tests passed.
+- TypeScript strict type-check passed.
+- ESLint passed with zero warnings.
+- Vite production build passed.
 
 ### What is next
 

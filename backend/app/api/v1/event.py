@@ -107,6 +107,12 @@ async def set_override(
 async def start_event(
     admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)
 ) -> LifecycleStatus:
+    current = await status_payload(session)
+    if current.state == "ended":
+        raise HTTPException(
+            status_code=409,
+            detail="Event has already ended; update the event end time before starting it",
+        )
     now = utc_now()
     await write_config(session, "event_start", now.isoformat())
     await write_config(session, "state_override", "live")

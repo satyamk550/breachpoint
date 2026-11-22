@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { brand } from '../../config/brand'
 import { Badge, Button, useToast } from '../ui'
 import { useAuth } from '../../hooks'
+import { useEventStatus } from '../../hooks'
 import { BrandMark } from './BrandMark'
 
 export function Header() {
@@ -10,6 +11,7 @@ export function Header() {
   const [loggingOut, setLoggingOut] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { data: eventStatus } = useEventStatus()
   const { showToast } = useToast()
 
   async function handleLogout() {
@@ -64,9 +66,9 @@ export function Header() {
             </>
           )}
         </nav>
-        <Badge className="event-status" variant="info">
+        <Badge className={`event-status event-status-${eventStatus?.state ?? 'draft_upcoming'}`} variant={eventStatus?.state === 'live' ? 'success' : eventStatus?.state === 'paused' ? 'warning' : eventStatus?.state === 'ended' ? 'neutral' : 'info'} aria-label={`Event status: ${eventStatus?.state === 'draft_upcoming' ? 'Upcoming' : eventStatus?.state ? eventStatus.state[0].toUpperCase() + eventStatus.state.slice(1) : 'Upcoming'}`}>
           <span className="event-status-mark" aria-hidden="true" />
-          Event status: not configured
+          {eventStatus?.state === 'draft_upcoming' ? 'Upcoming' : eventStatus?.state ? eventStatus.state[0].toUpperCase() + eventStatus.state.slice(1) : 'Upcoming'}
         </Badge>
       </div>
     </header>
