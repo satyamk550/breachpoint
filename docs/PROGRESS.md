@@ -83,8 +83,6 @@ Create the first administrator from the backend container with `python -m app.cl
 
 ### What is next
 
-**Phase 2.5** — Lifecycle service: draft/upcoming, live, paused, ended, capabilities, and freeze.
-
 ## Phase 1.5 — Frontend foundation (complete)
 
 - Added reusable, keyboard-accessible UI primitives, the responsive app shell, semantic design tokens, self-hosted fonts, and status, 404, and error routes. No later-phase product functionality was introduced.
@@ -141,5 +139,35 @@ npm run build
 
 ### What is next
 
-**Phase 2.5** — Lifecycle service: draft/upcoming, live, paused, ended, capabilities, and freeze.
+**Phase 3** — Teams: roster, capacity guard, lock on live, and admin swap.
+
+## Phase 2.5 — Lifecycle service (complete)
+
+### What was done
+
+- Added migration `0003` for lifecycle Config keys and the append-only `audit_log` table.
+- Added the clock-injectable lifecycle service with `draft_upcoming`, `live`, `paused`, and `ended` states; explicit overrides take precedence over configured times.
+- Added capability mapping and the reusable `require_capability()` dependency for later phases.
+- Added public `GET /api/v1/event/status` with state, capabilities, server time, event bounds, and freeze metadata.
+- Added CSRF-protected admin lifecycle endpoints for setting times, starting, pausing, resuming, and ending the event; every transition writes an AuditLog row.
+- Added real PostgreSQL/Redis tests for fake-clock states, override precedence, capability mapping, public status, player authorization, and audit rows.
+
+### How to run
+
+```bash
+docker compose up --build -d backend
+docker compose exec backend alembic upgrade head
+docker compose exec backend pytest tests/ -v
+```
+
+### Phase 2.5 verification
+
+- Migration `0003` applied successfully from `0002`.
+- Ruff: all checks passed.
+- Pytest: 16 tests passed against real PostgreSQL and Redis.
+- `GET /api/v1/event/status` is public and returns lifecycle state, capabilities, server time, start/end, and freeze metadata.
+
+### What is next
+
+**Phase 3** — Teams: roster, capacity guard, lock on live, and admin swap.
 

@@ -7,6 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.core.redis import get_redis
 from app.models.user import User
+from app.services.lifecycle import (
+    get_capabilities,
+    get_state,
+    parse_datetime,
+    read_lifecycle_config,
+)
 
 
 async def get_current_user(
@@ -44,3 +50,26 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
+
+
+def require_capability(name: str):
+    async def dependency(
+        _user: User = Depends(require_user), session: AsyncSession = Depends(get_session)
+    ) -> User:
+        values = await read_lifecycle_config(session)
+        state = get_state(
+            event_start=parse_datetime(values["event_start"]),
+            event_end=parse_datetime(values["event_end"]),
+            state_override=values["state_override"],
+        )
+        capabilities = get_capabilities(state)
+        if name not in capabilities:
+            raise HTTPException(status_code=500, detail=f"Unknown event capability: {name}")
+        if not capabilities[name]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Event capability '{name}' is not available while the event is {state}",
+            )
+        return _user
+
+    return dependency

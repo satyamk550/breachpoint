@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     register_ip_limit: int = 5
     login_window_seconds: int = 900
     register_window_seconds: int = 3600
+    lifecycle_clock_timezone: str = "UTC"
 
 
 settings = Settings()
