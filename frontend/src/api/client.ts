@@ -5,6 +5,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    public readonly retryAfter?: number,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -16,6 +17,7 @@ type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials' | 'signal'> & 
   signal?: AbortSignal
   timeoutMs?: number
   allowErrorStatuses?: readonly number[]
+  redirectOnUnauthorized?: boolean
 }
 
 function getErrorMessage(payload: unknown, fallback: string): string {
@@ -24,6 +26,12 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   if (typeof candidate.detail === 'string') return candidate.detail
   if (typeof candidate.message === 'string') return candidate.message
   return fallback
+}
+
+function getCookie(name: string): string | undefined {
+  const prefix = `${name}=`
+  const cookie = document.cookie.split('; ').find((value) => value.startsWith(prefix))
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : undefined
 }
 
 export async function apiRequest<T>(
@@ -35,6 +43,7 @@ export async function apiRequest<T>(
     body,
     signal,
     timeoutMs,
+    redirectOnUnauthorized = true,
     ...requestOptions
   } = options
   const controller = new AbortController()
@@ -48,6 +57,10 @@ export async function apiRequest<T>(
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
   if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes((requestOptions.method ?? 'GET').toUpperCase())) {
+    const csrfToken = getCookie('csrf_token')
+    if (csrfToken) headers.set('X-CSRF-Token', csrfToken)
+  }
 
   // Future CSRF hook: add the cookie-backed CSRF header here when cookie auth is introduced.
   try {
@@ -71,10 +84,27 @@ export async function apiRequest<T>(
     }
 
     if (!response.ok && !allowErrorStatuses.includes(response.status)) {
-      throw new ApiError(
-        response.status,
-        getErrorMessage(payload, response.statusText || 'Request failed'),
-      )
+      const retryAfter = response.status === 429
+        ? Number(response.headers.get('Retry-After') ?? 0) || undefined
+        : undefined
+      const message = retryAfter
+        ? `Too many requests. Try again in ${retryAfter} seconds.`
+        : getErrorMessage(payload, response.statusText || 'Request failed')
+
+      if (response.status === 429) {
+        window.dispatchEvent(new CustomEvent('api:rate-limit', {
+          detail: { retryAfter, message },
+        }))
+      }
+      if (response.status === 401 && redirectOnUnauthorized) {
+        const currentPath = `${window.location.pathname}${window.location.search}`
+        if (!currentPath.startsWith('/login')) {
+          const returnTo = encodeURIComponent(currentPath || '/')
+          window.history.pushState({}, '', `/login?returnTo=${returnTo}`)
+          window.dispatchEvent(new PopStateEvent('popstate'))
+        }
+      }
+      throw new ApiError(response.status, message, retryAfter)
     }
     if (responseText && payload === undefined) {
       throw new ApiError(response.status, 'The API returned invalid JSON')
@@ -89,7 +119,15 @@ export async function apiRequest<T>(
 
 export function apiGet<T>(
   path: string,
-  options: Pick<ApiRequestOptions, 'signal' | 'timeoutMs' | 'allowErrorStatuses'> = {},
+  options: Pick<ApiRequestOptions, 'signal' | 'timeoutMs' | 'allowErrorStatuses' | 'redirectOnUnauthorized'> = {},
 ): Promise<T> {
   return apiRequest<T>(path, { ...options, method: 'GET' })
+}
+
+export function apiPost<T>(
+  path: string,
+  body?: unknown,
+  options: Pick<ApiRequestOptions, 'signal' | 'timeoutMs' | 'allowErrorStatuses' | 'redirectOnUnauthorized'> = {},
+): Promise<T> {
+  return apiRequest<T>(path, { ...options, method: 'POST', body })
 }

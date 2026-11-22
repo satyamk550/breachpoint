@@ -1,11 +1,29 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { brand } from '../../config/brand'
-import { Badge } from '../ui'
+import { Badge, Button, useToast } from '../ui'
+import { useAuth } from '../../hooks'
 import { BrandMark } from './BrandMark'
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+  const { showToast } = useToast()
+
+  async function handleLogout() {
+    setLoggingOut(true)
+    try {
+      await logout()
+      showToast({ title: 'Signed out', description: 'Your session has ended.', variant: 'success' })
+      navigate('/login', { replace: true })
+    } catch {
+      showToast({ title: 'Unable to sign out', description: 'Try again in a moment.', variant: 'danger' })
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <header className="topbar page-container">
@@ -33,6 +51,18 @@ export function Header() {
           <NavLink to="/" end onClick={() => setMenuOpen(false)}>
             Status
           </NavLink>
+          {user ? (
+            <>
+              <NavLink to="/profile" onClick={() => setMenuOpen(false)}>Profile</NavLink>
+              <span className="header-user">{user.username}</span>
+              <Button variant="ghost" loading={loggingOut} onClick={handleLogout}>Log out</Button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/login" onClick={() => setMenuOpen(false)}>Sign in</NavLink>
+              <NavLink to="/register" onClick={() => setMenuOpen(false)}>Register</NavLink>
+            </>
+          )}
         </nav>
         <Badge className="event-status" variant="info">
           <span className="event-status-mark" aria-hidden="true" />

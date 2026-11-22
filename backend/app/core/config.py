@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str = "redis://localhost:6379/0"
     trusted_proxy_network: str = "172.28.0.0/16"
+    session_ttl_seconds: int = 43200
+    login_ip_limit: int = 10
+    login_username_limit: int = 5
+    register_ip_limit: int = 5
+    login_window_seconds: int = 900
+    register_window_seconds: int = 3600
 
 
 settings = Settings()

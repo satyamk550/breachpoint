@@ -51,6 +51,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((current) => [...current, { ...toast, id: nextId.current }])
   }, [])
 
+  useEffect(() => {
+    const onRateLimit = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail
+      showToast({
+        title: 'Slow down',
+        description: detail.message ?? 'Too many requests. Try again shortly.',
+        variant: 'warning',
+      })
+    }
+    window.addEventListener('api:rate-limit', onRateLimit)
+    return () => window.removeEventListener('api:rate-limit', onRateLimit)
+  }, [showToast])
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}

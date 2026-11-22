@@ -57,7 +57,33 @@ GET http://localhost:<HTTP_PORT>/api/v1/health
 
 ### What is next
 
-**Phase 2** — Auth: registration, login, JWT + HTTP-only cookie, roles (`admin` / `player`), rate limiting.
+**Phase 2** — Auth: registration, login, sessions, roles, CSRF, and rate limiting.
+
+## Phase 2 — Auth, roles, and rate limiting (complete)
+
+### What was done
+
+- Added migration `0002` with case-insensitive unique username/email indexes, ban and login timestamps, and one-time password-reset tokens.
+- Added Argon2 password hashing with 10–128 character validation and common-password rejection.
+- Added Redis-backed 12-hour sliding HTTP-only sessions, logout, session revocation after password changes/resets, and banned-user checks.
+- Added double-submit CSRF protection for all state-changing HTTP methods.
+- Added register, login, logout, me, change-password, reset-password, and admin reset-token endpoints under `/api/v1/auth`.
+- Added player/admin dependencies, configurable Redis rate limits with `Retry-After`, and `python -m app.cli create-admin`.
+- Added backend auth integration tests for registration, login/logout/me, generic login errors, CSRF, banning, and closed registration.
+
+### How to run
+
+```bash
+docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test run --rm backend-test alembic upgrade head
+docker compose --profile test run --rm backend-test
+```
+
+Create the first administrator from the backend container with `python -m app.cli create-admin`.
+
+### What is next
+
+**Phase 2.5** — Lifecycle service: draft/upcoming, live, paused, ended, capabilities, and freeze.
 
 ## Phase 1.5 — Frontend foundation (complete)
 
@@ -81,4 +107,39 @@ GET http://localhost:<HTTP_PORT>/api/v1/health
 ### What is next
 
 **Phase 2** — Auth: registration, login, JWT + HTTP-only cookie, roles (`admin` / `player`), rate limiting.
+
+## Phase 2 — Frontend auth (complete)
+
+### What was done
+
+- Added Login, Register, and Profile pages using the existing dark CTF design tokens and UI primitives.
+- Added field validation, inline errors, loading states, accessible labels, and toast feedback.
+- Added TanStack Query `AuthProvider` backed by `GET /auth/me`, plus protected and admin route guards with return-path redirects.
+- Added CSRF header injection from the readable cookie, 401 login redirects, and global 429 retry messaging from `Retry-After`.
+- Updated the header with signed-in username/profile/logout controls and signed-out login/register links.
+- Added MSW/Vitest coverage for login success/failure, protected-route redirects, rate-limit messaging, and logout.
+- No credentials, tokens, or passwords are written to localStorage or sessionStorage.
+
+### How to run
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm test -- --run
+npm run type-check
+npm run lint
+npm run build
+```
+
+### Phase 2 frontend verification
+
+- Vitest: 3 files and 11 tests passed.
+- TypeScript strict type-check passed.
+- ESLint passed with zero warnings.
+- Vite production build passed.
+
+### What is next
+
+**Phase 2.5** — Lifecycle service: draft/upcoming, live, paused, ended, capabilities, and freeze.
 
