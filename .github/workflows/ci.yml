@@ -52,6 +52,16 @@ jobs:
           cd backend
           ruff check app/ tests/
 
+      - name: Apply database migrations
+        run: |
+          cd backend
+          alembic upgrade head
+        env:
+          SECRET_KEY: test-secret-key-for-ci-only
+          DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/testdb
+          REDIS_URL: redis://localhost:6379/0
+          TRUSTED_PROXY_NETWORK: "172.28.0.0/16"
+
       - name: Run tests
         run: |
           cd backend
