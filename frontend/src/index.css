@@ -1312,3 +1312,20 @@ textarea,
     transition-duration: 0.01ms !important;
   }
 }
+
+.team-page { width: min(100%, 58rem); margin: 0 auto; }
+.team-heading { margin-bottom: 2rem; }
+.team-form { margin-top: 1rem; }
+.team-list { display: grid; gap: .5rem; margin-top: 1.5rem; }
+.team-list-row, .member-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); background: var(--color-surface); text-decoration: none; }
+.team-list-row:hover { border-color: var(--color-accent); }
+.team-list-row span:last-child { color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--type-caption); }
+.member-list { display: grid; gap: .5rem; }
+.member-row span { display: inline-flex; align-items: center; gap: .6rem; }
+.team-controls { display: grid; gap: 1rem; margin-top: 1.5rem; }
+.team-controls .form-field { max-width: 30rem; }
+.secret-reveal { display: flex; align-items: center; gap: .75rem; margin: 1rem 0; padding: 1rem; border: 1px solid var(--color-accent); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface)); }
+.secret-reveal code { overflow-wrap: anywhere; color: var(--color-accent); font-family: var(--font-mono); }
+.warning-copy { color: var(--color-warning); font-size: var(--type-small); line-height: 1.6; }
+.roster-lock-banner { margin-bottom: 1rem; padding: .9rem 1rem; border: 1px solid var(--color-warning); border-radius: var(--radius-sm); color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 7%, var(--color-surface)); }
+.team-list-skeleton, .team-loading { min-height: 10rem; margin-top: 1.5rem; }

@@ -4,6 +4,7 @@ import { brand } from '../../config/brand'
 import { Badge, Button, useToast } from '../ui'
 import { useAuth } from '../../hooks'
 import { useEventStatus } from '../../hooks'
+import { useMyTeam } from '../../hooks/useTeams'
 import { BrandMark } from './BrandMark'
 
 export function Header() {
@@ -11,6 +12,7 @@ export function Header() {
   const [loggingOut, setLoggingOut] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { data: myTeam } = useMyTeam(Boolean(user))
   const { data: eventStatus } = useEventStatus()
   const { showToast } = useToast()
 
@@ -55,6 +57,8 @@ export function Header() {
           </NavLink>
           {user ? (
             <>
+              {user.role === 'player' && <NavLink to={myTeam ? '/team' : '/team/onboarding'} onClick={() => setMenuOpen(false)}>My team</NavLink>}
+              {user.role === 'player' && <NavLink to="/teams" onClick={() => setMenuOpen(false)}>Teams</NavLink>}
               <NavLink to="/profile" onClick={() => setMenuOpen(false)}>Profile</NavLink>
               <span className="header-user">{user.username}</span>
               <Button variant="ghost" loading={loggingOut} onClick={handleLogout}>Log out</Button>

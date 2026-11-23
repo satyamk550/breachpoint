@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks'
+import { useMyTeam } from '../../hooks/useTeams'
 
 function LoginRedirect() {
   const location = useLocation()
@@ -17,10 +18,20 @@ function AuthLoading() {
   )
 }
 
-export function ProtectedRoute() {
-  const { isLoading, isAuthenticated } = useAuth()
+export function ProtectedRoute({ allowNoTeam = false }: { allowNoTeam?: boolean }) {
+  const { isLoading, isAuthenticated, user } = useAuth()
+  const team = useMyTeam(isAuthenticated)
   if (isLoading) return <AuthLoading />
   if (!isAuthenticated) return <LoginRedirect />
+  if (!allowNoTeam && user?.role === 'player' && team.isFetched && !team.data) return <Navigate replace to="/team/onboarding" />
+  return <Outlet />
+}
+
+export function PlayerHomeRoute() {
+  const { isLoading, isAuthenticated, user } = useAuth()
+  const team = useMyTeam(isAuthenticated)
+  if (isLoading || (isAuthenticated && team.isPending)) return <AuthLoading />
+  if (isAuthenticated && user?.role === 'player' && !team.data) return <Navigate replace to="/team/onboarding" />
   return <Outlet />
 }
 

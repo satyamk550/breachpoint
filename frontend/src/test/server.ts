@@ -3,6 +3,7 @@ import { setupServer } from 'msw/node'
 
 export const healthUrl = 'http://localhost:3000/api/v1/health'
 export const eventStatusUrl = 'http://localhost:3000/api/v1/event/status'
+export const teamMeUrl = 'http://localhost:3000/api/v1/teams/me'
 
 export const upcomingEventStatus = {
   state: 'draft_upcoming',
@@ -28,4 +29,5 @@ export const server = setupServer(
     version: '1.0.0',
   })),
   http.get(eventStatusUrl, () => HttpResponse.json(upcomingEventStatus)),
+  http.get(teamMeUrl, () => HttpResponse.json(null)),
 )

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { login } from '../api/auth'
+import { getMyTeam } from '../api/teams'
 import { Button, FieldError, Input, Label } from '../components/ui'
 import { useToast } from '../components/ui'
 import { useQueryClient } from '@tanstack/react-query'
@@ -33,8 +34,10 @@ export function LoginPage() {
     try {
       const user = await login({ username: username.trim(), password })
       queryClient.setQueryData(['auth', 'me'], user)
+      const team = user.role === 'player' ? await getMyTeam() : null
+      if (user.role === 'player') queryClient.setQueryData(['teams', 'me'], team)
       showToast({ title: 'Signed in', description: `Welcome back, ${user.username}.`, variant: 'success' })
-      navigate(safeReturnTo(new URLSearchParams(location.search).get('returnTo')), { replace: true })
+      navigate(user.role === 'player' ? (team ? '/team' : '/team/onboarding') : safeReturnTo(new URLSearchParams(location.search).get('returnTo')), { replace: true })
     } catch (error) {
       setErrors({ form: error instanceof ApiError ? error.message : 'Unable to sign in. Try again.' })
     } finally {

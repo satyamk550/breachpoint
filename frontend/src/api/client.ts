@@ -131,3 +131,11 @@ export function apiPost<T>(
 ): Promise<T> {
   return apiRequest<T>(path, { ...options, method: 'POST', body })
 }
+
+export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+  return apiRequest<T>(path, { method: 'PATCH', body })
+}
+
+export function apiDelete<T>(path: string): Promise<T> {
+  return apiRequest<T>(path, { method: 'DELETE' })
+}

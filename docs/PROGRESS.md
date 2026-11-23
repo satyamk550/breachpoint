@@ -230,3 +230,19 @@ docker compose --profile test run --rm backend-test
 - Lock mutations were verified against real PostgreSQL/Redis: removing the team `FOR UPDATE` produced 15 successful joins instead of 1; removing the advisory lock produced 5 successful creates instead of 1; removing the user-row lock produced two successful joins for one user instead of one.
 - All mutation changes were restored. The Phase 3 files are untracked, so `git checkout -- backend/app/api/v1/teams.py` correctly reported that the path is not known to Git; the exact original lock lines were restored with a narrow patch.
 - Every path that locks both users and teams now locks user rows first, then team rows; multiple team rows are acquired in deterministic UUID order. The crossing join/kick test completed under a timeout with 404/409 and no 500.
+## Phase 3 frontend
+
+Implemented the team onboarding, team management, and public team directory UI using the existing design system. Added typed team API wrappers for the exact backend routes and fields, TanStack Query team hooks, no-team onboarding routing, one-time join-secret display with copy support, captain/member controls with confirmations, roster-lock messaging and disabled controls, public search, and clear API error/rate-limit messages. Secrets remain only in component state.
+
+Validation from `frontend/`:
+
+- `npm.cmd run lint` passed.
+- `npm.cmd run type-check` passed.
+- `npm.cmd test -- --run` passed: 23 tests across 5 files.
+- `npm.cmd run build` passed with Vite production output.
+
+### Phase 3 frontend navigation follow-up
+
+Signed-in player navigation now exposes My team and Teams on desktop and mobile. Players without a team are redirected from the home/status page to onboarding, while Profile and the public directory remain available; Profile now includes the no-team call to action or a team summary card. Login routes players directly to their team or onboarding, and locked team pages explain that an administrator can help with replacements.
+
+Validation: `npm.cmd run lint`, `npm.cmd run type-check`, `npm.cmd test -- --run` (26 tests passed across 5 files), and `npm.cmd run build` all pass.

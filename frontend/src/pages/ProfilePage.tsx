@@ -2,11 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../api/client'
 import { changePassword } from '../api/auth'
+import { Link } from 'react-router-dom'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, FieldError, Input, Label, useToast } from '../components/ui'
 import { useAuth } from '../hooks'
+import { useMyTeam } from '../hooks/useTeams'
 
 export function ProfilePage() {
   const { user } = useAuth()
+  const { data: team } = useMyTeam(Boolean(user))
   const queryClient = useQueryClient()
   const { showToast } = useToast()
   const [values, setValues] = useState({ current: '', next: '', confirm: '' })
@@ -46,6 +49,7 @@ export function ProfilePage() {
         <p className="page-description">Manage your account details and keep your access secure.</p>
       </div>
       <div className="profile-grid">
+        {!team && <Card className="profile-team-notice"><CardContent><strong>You are not in a team yet</strong><p>Join a team before the event begins.</p><Link className="ui-button ui-button-primary" to="/team/onboarding">Create or join a team</Link></CardContent></Card>}
         <Card>
           <CardHeader><CardTitle>Identity</CardTitle><CardDescription>Your event account.</CardDescription></CardHeader>
           <CardContent className="profile-identity">
@@ -54,6 +58,7 @@ export function ProfilePage() {
             <div><span className="profile-label">Role</span><strong>{user?.role}</strong></div>
           </CardContent>
         </Card>
+        {team && <Card><CardHeader><CardTitle>Your team</CardTitle><CardDescription>Your current roster.</CardDescription></CardHeader><CardContent className="profile-identity"><div><span className="profile-label">Team</span><strong>{team.name}</strong></div><div><span className="profile-label">Members</span><strong>{team.member_count} of 4</strong></div><div><span className="profile-label">Your role</span><strong>{team.captain_id === user?.id ? 'Captain' : 'Member'}</strong></div><Link className="ui-button ui-button-secondary" to="/team">Manage team</Link></CardContent></Card>}
         <Card>
           <CardHeader><CardTitle>Change password</CardTitle><CardDescription>Changing it signs out every active session.</CardDescription></CardHeader>
           <CardContent>
