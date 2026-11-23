@@ -12,7 +12,10 @@ from app.models.config import Config
 
 LifecycleState = Literal["draft_upcoming", "live", "paused", "ended"]
 StateOverride = Literal["none", "live", "paused", "ended"]
-CONFIG_KEYS = {"event_start", "event_end", "state_override", "freeze_enabled", "freeze_time"}
+CONFIG_KEYS = {
+    "event_start", "event_end", "state_override", "freeze_enabled", "freeze_time",
+    "team_size", "max_teams",
+}
 
 
 @dataclass(frozen=True)

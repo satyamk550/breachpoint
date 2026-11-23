@@ -194,3 +194,39 @@ docker compose exec backend pytest tests/ -v
 
 **Phase 3** — Teams: roster, capacity guard, lock on live, and admin swap.
 
+## Phase 3 - Teams and roster safety (complete)
+
+### What was done
+
+- Added migration `0004` from `0003` with Argon2-backed team join-secret storage, captain/ban/hidden fields, a case-insensitive team-name index, and `team_size`/`max_teams` configuration.
+- Added player team creation, joining, leaving, kicking, secret rotation, renaming, captain transfer, public listings/details, and authenticated `me` views. Join secrets are returned only by create/rotate responses; hashes are never serialized.
+- Added admin team listing, edit, ban, hide, delete, user move, and post-lock member replacement endpoints. Every admin mutation writes an AuditLog row with the actor.
+- Applied `require_capability("can_change_roster")` to player roster mutations; admin replacement remains available after the roster lock.
+- Added Redis rate limiting for join attempts by IP and user, generic wrong-team/secret errors, and clean 409 responses for duplicate membership, full teams, and max-team limits.
+- Added real concurrent Postgres/Redis tests for 10 joins into one remaining slot, 5 creates into one remaining max-team slot, and one user joining two teams simultaneously.
+
+### How to run
+
+```bash
+docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test build backend-test
+docker compose --profile test run --rm backend-test alembic upgrade head
+docker compose --profile test run --rm backend-test
+```
+
+### Phase 3 verification
+
+- Pytest: 26 tests passed against real PostgreSQL and Redis in 14.88s.
+- Concurrency tests passed: `test_concurrent_joins_enforce_capacity`, `test_concurrent_creates_use_advisory_max_team_lock`, and `test_one_user_parallel_join_to_two_teams_succeeds_once`.
+- `alembic heads` reports exactly one head: `0004`.
+
+### What is next
+
+**Phase 4a** - Challenges, categories, flags, visibility, and prerequisites.
+
+### Phase 3 verification follow-up
+
+- `pytest tests/test_teams.py --collect-only -q`: 12 tests collected, covering generic wrong/unknown secrets, response secrecy including `/auth/me`, captain-only actions, leave/delete rules, hidden/banned teams, 1-3 member teams, lifecycle lock, admin replacement, rate limiting, crossing lock order, and all three concurrency races.
+- Lock mutations were verified against real PostgreSQL/Redis: removing the team `FOR UPDATE` produced 15 successful joins instead of 1; removing the advisory lock produced 5 successful creates instead of 1; removing the user-row lock produced two successful joins for one user instead of one.
+- All mutation changes were restored. The Phase 3 files are untracked, so `git checkout -- backend/app/api/v1/teams.py` correctly reported that the path is not known to Git; the exact original lock lines were restored with a narrow patch.
+- Every path that locks both users and teams now locks user rows first, then team rows; multiple team rows are acquired in deterministic UUID order. The crossing join/kick test completed under a timeout with 404/409 and no 500.

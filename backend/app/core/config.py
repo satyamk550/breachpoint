@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     register_ip_limit: int = 5
     login_window_seconds: int = 900
     register_window_seconds: int = 3600
+    join_user_limit: int = 5
+    join_ip_limit: int = 10
+    join_window_seconds: int = 900
     lifecycle_clock_timezone: str = "UTC"
 
 

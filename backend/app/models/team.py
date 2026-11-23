@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,8 +16,13 @@ class Team(Base):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
-    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
-    invite_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    join_secret_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    captain_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    is_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    is_hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
