@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.challenges import router as challenges_router
 from app.api.v1.event import router as event_router
 from app.api.v1.health import router as health_router
 from app.api.v1.teams import router as teams_router
@@ -13,6 +14,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(event_router, prefix="/api/v1")
     app.include_router(teams_router, prefix="/api/v1")
+    app.include_router(challenges_router, prefix="/api/v1")
     app.add_middleware(CSRFMiddleware)
     return app
 

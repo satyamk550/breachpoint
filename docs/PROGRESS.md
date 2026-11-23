@@ -277,3 +277,34 @@ Validation from `frontend/`:
 Signed-in player navigation now exposes My team and Teams on desktop and mobile. Players without a team are redirected from the home/status page to onboarding, while Profile and the public directory remain available; Profile now includes the no-team call to action or a team summary card. Login routes players directly to their team or onboarding, and locked team pages explain that an administrator can help with replacements.
 
 Validation: `npm.cmd run lint`, `npm.cmd run type-check`, `npm.cmd test -- --run` (26 tests passed across 5 files), and `npm.cmd run build` all pass.
+
+## Phase 4a - Challenges, categories, flags, visibility, and prerequisites (complete)
+
+### What was done
+
+- Added migration `0005` (down revision `0004`) with categories, challenges, flags, tags, prerequisite edges, and the minimal team/challenge/user `solves` table with a unique team/challenge constraint.
+- Added admin-only, CSRF-protected category and challenge CRUD, dedicated flag CRUD, bulk visibility changes, and challenge cloning. Clones are drafts and copy tags/flags but not prerequisites or solves.
+- Added write validation for challenge scoring fields, lengths, attempts, and regex flags. Prerequisite writes reject self-reference, missing challenges, and cycles of any length.
+- Added player challenge list/detail endpoints gated by team membership, lifecycle `can_view_challenges`, visible state, and solved prerequisites. Results include live Solve counts and the current team's solved state, grouped by category order.
+- Kept flag content out of every player response and challenge list/detail response. Admin flag endpoints are the only flag-content read surface; audit rows contain only action and challenge/flag IDs.
+- Added 4 real-Postgres/Redis integration tests covering eligibility and lifecycle denial, prerequisite unlocking and cycles, CRUD/clone/bulk/delete rules, validation, authorization, flag leakage, and audit secrecy.
+
+### How to run
+
+```bash
+docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test build backend-test
+docker compose --profile test run --rm backend-test alembic upgrade head
+docker compose --profile test run --rm backend-test
+```
+
+### Phase 4a verification
+
+- Pytest: **37 passed** against real PostgreSQL and Redis (above the required 32).
+- Ruff: `All checks passed!` for `backend/app` and `backend/tests`.
+- Alembic heads: exactly one head, `0005 (head)`.
+- No frontend, hints, files, submissions, grading, or scoring logic was added.
+
+### What is next
+
+**Phase 4b** - Hints and secure challenge files.
