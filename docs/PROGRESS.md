@@ -308,3 +308,17 @@ docker compose --profile test run --rm backend-test
 ### What is next
 
 **Phase 4b** - Hints and secure challenge files.
+
+### Phase 4a verification follow-up
+
+- Starting Git status was clean before verification tests were added; after all mutation restores, only `backend/tests/test_challenges.py` is modified.
+- `pytest --collect-only -q` collected 14 focused challenge tests; the complete backend suite collected 47 tests.
+- Final restored run: **46 passed, 1 xfailed**. The xfail is explicit for the uncovered production gap: regex flag content of 201 characters is accepted, although the Phase 4a requirement is a 200-character maximum.
+- Mutation checks were performed one at a time for player flag leakage, hidden-challenge 403, missing prerequisite filtering, removed cycle detection, removed admin authorization, and audit flag-content leakage. Every mutation caused a focused test failure and was restored.
+
+### Phase 4a regex validation follow-up
+
+- Regex flag content is limited to 200 characters; static flag content remains limited to 500 characters.
+- Regexes must compile and are rejected when they match conservative nested-quantifier or quantified-alternation backtracking shapes. Remaining patterns are timed against a 5,000-character adversarial string with a small validation budget.
+- Flag validation errors remove rejected flag input from 422 responses, and audit metadata continues to contain only IDs and action data.
+- Added boundary, nested-quantifier, normal-pattern, static-limit, error-secrecy, and audit-secrecy coverage. The previous regex-length xfail is now a normal passing test.

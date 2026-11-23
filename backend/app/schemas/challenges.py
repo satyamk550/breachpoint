@@ -1,4 +1,5 @@
 import re
+import time
 import uuid
 from datetime import datetime
 from typing import Literal
@@ -103,11 +104,33 @@ class FlagWrite(BaseModel):
 
     @model_validator(mode="after")
     def validate_regex(self):
-        if self.type == "regex":
-            try:
-                re.compile(self.content)
-            except re.error as exc:
-                raise ValueError(f"invalid regex flag: {exc}") from exc
+        if self.type != "regex":
+            return self
+        if len(self.content) > 200:
+            raise ValueError("regex flag patterns must be 200 characters or fewer")
+        try:
+            compiled = re.compile(self.content)
+        except re.error as exc:
+            raise ValueError("invalid regex flag pattern") from exc
+
+        # Keep this deliberately conservative: reject common catastrophic-backtracking
+        # shapes, then time a bounded adversarial search before storing the pattern.
+        nested_quantifier = re.search(
+            r"\((?:[^()\\]|\\.)*(?:[+*]|\{\d+(?:,\d*)?\})(?:[^()\\]|\\.)*\)"
+            r"(?:[+*]|\{\d+(?:,\d*)?\})",
+            self.content,
+        )
+        quantified_alternation = re.search(
+            r"\((?:[^()\\]|\\.)*\|(?:[^()\\]|\\.)*\)" r"(?:[+*]|\{\d+(?:,\d*)?\})",
+            self.content,
+        )
+        if nested_quantifier or quantified_alternation:
+            raise ValueError("regex flag pattern is too expensive to match")
+        test_string = "a" * 4999 + "!"
+        started = time.perf_counter()
+        compiled.search(test_string)
+        if time.perf_counter() - started > 0.05:
+            raise ValueError("regex flag pattern is too expensive to match")
         return self
 
 
