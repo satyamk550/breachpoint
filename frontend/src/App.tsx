@@ -11,6 +11,7 @@ import { LoginPage, ProfilePage, RegisterPage } from './pages'
 import { TeamOnboardingPage } from './pages/TeamOnboardingPage'
 import { TeamPage } from './pages/TeamPage'
 import { TeamsPage } from './pages/TeamsPage'
+import { AdminEventPage } from './pages/AdminEventPage'
 
 function BrandMetadata() {
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function App() {
               <Route path="profile" element={<ProfilePage />} />
             </Route>
             <Route element={<AdminRoute />}>
-              <Route path="admin" element={<StatusPage />} />
+              <Route path="admin/event" element={<AdminEventPage />} />
             </Route>
             <Route path="error" element={<ErrorPage />} />
             <Route path="*" element={<NotFoundPage />} />

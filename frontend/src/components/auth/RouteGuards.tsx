@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks'
 import { useMyTeam } from '../../hooks/useTeams'
+import { ForbiddenPage } from '../../pages/ForbiddenPage'
 
 function LoginRedirect() {
   const location = useLocation()
@@ -39,6 +40,6 @@ export function AdminRoute() {
   const { isLoading, user } = useAuth()
   if (isLoading) return <AuthLoading />
   if (!user) return <LoginRedirect />
-  if (user.role !== 'admin') return <Navigate replace to="/" />
+  if (user.role !== 'admin') return <ForbiddenPage />
   return <Outlet />
 }

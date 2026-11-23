@@ -224,6 +224,37 @@ docker compose --profile test run --rm backend-test
 
 **Phase 4a** - Challenges, categories, flags, visibility, and prerequisites.
 
+## Phase 2.5 - Admin event controls
+
+### What was done
+
+- Added the admin-only `/admin/event` control page with current lifecycle state, capabilities, local-browser schedule editing, UTC API conversion, inline end-before-start validation, and disabled action states.
+- Added confirmation dialogs and toast feedback for Start now, Pause, Resume, and End. The page documents that Resume does not enforce the scheduled end and that End must be pressed manually.
+- Added the admin-only `GET /api/v1/event/admin/audit?limit=10` endpoint for the latest event changes, with authorization and a backend test.
+- Added MSW/Vitest coverage for admin access, player 403 handling, action confirmations, and schedule validation.
+
+### How to run
+
+```bash
+cd frontend
+npm.cmd run lint
+npm.cmd run type-check
+npm.cmd test
+npm.cmd run build
+```
+
+### Verification
+
+- Frontend lint passed.
+- Frontend strict type-check passed.
+- Frontend Vitest: 6 files and 33 tests passed.
+- Frontend Vite production build passed.
+- Backend pytest was attempted with the configured venv but requires the project `.env` and running PostgreSQL/Redis test services in this environment.
+
+### What is next
+
+**Phase 4a** - Challenges, categories, flags, visibility, and prerequisites.
+
 ### Phase 3 verification follow-up
 
 - `pytest tests/test_teams.py --collect-only -q`: 12 tests collected, covering generic wrong/unknown secrets, response secrecy including `/auth/me`, captain-only actions, leave/delete rules, hidden/banned teams, 1-3 member teams, lifecycle lock, admin replacement, rate limiting, crossing lock order, and all three concurrency races.

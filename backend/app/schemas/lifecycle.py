@@ -32,3 +32,12 @@ class LifecycleStatus(BaseModel):
     end: datetime | None
     freeze_enabled: bool
     freeze_time: datetime | None
+
+
+class EventAuditEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    id: str
+    action: str
+    target: str
+    created_at: datetime

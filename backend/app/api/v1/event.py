@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_admin
@@ -11,7 +12,7 @@ from app.core.db import get_session
 from app.models.audit_log import AuditLog
 from app.models.config import Config
 from app.models.user import User
-from app.schemas.lifecycle import LifecycleStatus, LifecycleTimesRequest
+from app.schemas.lifecycle import EventAuditEntry, LifecycleStatus, LifecycleTimesRequest
 from app.services.lifecycle import (
     get_capabilities,
     get_state,
@@ -64,6 +65,31 @@ async def record_action(
 @router.get("/status", response_model=LifecycleStatus)
 async def event_status(session: AsyncSession = Depends(get_session)) -> LifecycleStatus:
     return await status_payload(session)
+
+
+@router.get("/admin/audit", response_model=list[EventAuditEntry])
+async def event_audit(
+    limit: int = Query(default=10, ge=1, le=50),
+    _admin: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> list[EventAuditEntry]:
+    rows = (
+        await session.scalars(
+            select(AuditLog)
+            .where(AuditLog.target == "event")
+            .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [
+        EventAuditEntry(
+            id=str(row.id),
+            action=row.action,
+            target=row.target,
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
 
 
 @router.put("/admin/times", response_model=LifecycleStatus)
@@ -140,3 +166,15 @@ async def end_event(
     admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)
 ) -> LifecycleStatus:
     return await set_override("ended", "event_ended", admin, session)
+
+
+@router.post("/admin/reset", response_model=LifecycleStatus)
+async def reset_event(
+    admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)
+) -> LifecycleStatus:
+    await write_config(session, "event_start", "")
+    await write_config(session, "event_end", "")
+    await write_config(session, "state_override", "none")
+    await record_action(session, admin, "event_reset", {"state_override": "none"})
+    await session.commit()
+    return await status_payload(session)

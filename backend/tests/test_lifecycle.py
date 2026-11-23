@@ -6,6 +6,7 @@ from sqlalchemy import delete, select
 from app.core.security import hash_password
 from app.models.audit_log import AuditLog
 from app.models.config import Config
+from app.models.team import Team
 from app.models.user import User
 from app.services.lifecycle import get_capabilities, get_state
 
@@ -135,6 +136,7 @@ async def test_lifecycle_admin_endpoints_require_csrf(client, db_session):
         ("post", "/api/v1/event/admin/pause"),
         ("post", "/api/v1/event/admin/resume"),
         ("post", "/api/v1/event/admin/end"),
+        ("post", "/api/v1/event/admin/reset"),
     ]:
         response = await getattr(client, method)(
             path,
@@ -218,3 +220,109 @@ async def test_admin_state_changes_write_audit_rows(client, db_session):
         "event_ended",
     ]
     assert all(row.actor_id == admin.id for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_admin_can_read_latest_event_audit_entries_and_players_cannot(client, db_session):
+    admin = await create_user(db_session, "admin")
+    player = await create_user(db_session, "player")
+    admin_token = await login(client, admin)
+
+    for action in ["event_started", "event_paused", "event_resumed"]:
+        db_session.add(AuditLog(actor_id=admin.id, action=action, target="event", meta={}))
+    db_session.add(
+        AuditLog(
+            actor_id=admin.id,
+            action="event_sensitive_metadata",
+            target="event",
+            meta={
+                "password_hash": "do-not-return",
+                "token": "do-not-return",
+                "flag": "do-not-return",
+            },
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/v1/event/admin/audit?limit=2",
+        headers={"X-CSRF-Token": admin_token},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+    assert all("password_hash" not in entry for entry in response.json())
+    assert all("token" not in entry for entry in response.json())
+    assert all("flag" not in entry for entry in response.json())
+    assert all(entry["target"] == "event" for entry in response.json())
+
+    too_large = await client.get(
+        "/api/v1/event/admin/audit?limit=51",
+        headers={"X-CSRF-Token": admin_token},
+    )
+    assert too_large.status_code == 422
+
+    player_token = await login(client, player)
+
+    forbidden = await client.get(
+        "/api/v1/event/admin/audit",
+        headers={"X-CSRF-Token": player_token},
+    )
+    assert forbidden.status_code == 403
+
+    client.cookies.clear()
+    unauthenticated = await client.get("/api/v1/event/admin/audit")
+    assert unauthenticated.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_can_reset_event_without_deleting_data(client, db_session):
+    admin = await create_user(db_session, "admin")
+    player = await create_user(db_session, "player")
+    token = await login(client, admin)
+    team = Team(
+        name="Persistent Team",
+        join_secret_hash=hash_password("team-secret-1"),
+        captain_id=player.id,
+    )
+    db_session.add(team)
+    await db_session.commit()
+
+    times = await client.put(
+        "/api/v1/event/admin/times",
+        json={"start": "2027-01-01T12:00:00Z", "end": "2027-01-01T14:00:00Z"},
+        headers={"X-CSRF-Token": token},
+    )
+    assert times.status_code == 200
+    ended = await client.post("/api/v1/event/admin/end", headers={"X-CSRF-Token": token})
+    assert ended.status_code == 200
+
+    missing_csrf = await client.post("/api/v1/event/admin/reset")
+    assert missing_csrf.status_code == 403
+
+    reset = await client.post("/api/v1/event/admin/reset", headers={"X-CSRF-Token": token})
+    assert reset.status_code == 200
+    assert reset.json()["state"] == "draft_upcoming"
+    assert reset.json()["start"] is None
+    assert reset.json()["end"] is None
+
+    assert await db_session.get(User, admin.id) is not None
+    assert await db_session.get(User, player.id) is not None
+    assert await db_session.get(Team, team.id) is not None
+    audit_rows = (
+        await db_session.scalars(
+            select(AuditLog).where(AuditLog.actor_id == admin.id).order_by(AuditLog.created_at)
+        )
+    ).all()
+    assert audit_rows[-1].action == "event_reset"
+
+    player_token = await login(client, player)
+    forbidden = await client.post(
+        "/api/v1/event/admin/reset", headers={"X-CSRF-Token": player_token}
+    )
+    assert forbidden.status_code == 403
+
+    client.cookies.pop("session_id", None)
+    unauthenticated = await client.post(
+        "/api/v1/event/admin/reset", headers={"X-CSRF-Token": client.cookies["csrf_token"]}
+    )
+    assert unauthenticated.status_code == 401

@@ -1314,6 +1314,32 @@ textarea,
 }
 
 .team-page { width: min(100%, 58rem); margin: 0 auto; }
+
+.admin-event-page { width: min(100%, 70rem); margin: 0 auto; }
+.admin-event-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem); align-items: end; gap: 2rem; margin-bottom: 2.5rem; }
+.admin-state-card { display: grid; gap: .7rem; padding: 1.25rem; }
+.admin-state-label, .admin-state-time { color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--type-caption); letter-spacing: .05em; text-transform: uppercase; }
+.admin-state-time { line-height: 1.5; text-transform: none; }
+.admin-event-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(18rem, .9fr); gap: 1rem; }
+.admin-time-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.admin-save-button { margin-top: 1.25rem; }
+.admin-action-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.admin-action-list .ui-button { width: 100%; }
+.admin-capabilities { display: grid; gap: .55rem; margin: 1.5rem 0 0; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
+.admin-capabilities div { display: flex; justify-content: space-between; gap: 1rem; font-size: var(--type-small); }
+.admin-capabilities dt { color: var(--color-text-muted); }
+.admin-capabilities dd { margin: 0; color: var(--color-text); font-family: var(--font-mono); font-size: var(--type-caption); text-transform: uppercase; }
+.admin-audit-section { margin-top: 2.5rem; }
+.admin-audit-card { overflow: hidden; }
+.admin-audit-action { color: var(--color-accent); font-family: var(--font-mono); font-size: var(--type-caption); text-transform: uppercase; }
+.admin-empty { margin: 0; padding: 2rem; color: var(--color-text-muted); font-size: var(--type-small); }
+.admin-dialog-actions { display: flex; justify-content: flex-end; gap: .65rem; }
+.admin-event-skeleton { height: 28rem; }
+
+@media (max-width: 760px) {
+  .admin-event-heading, .admin-event-grid { grid-template-columns: 1fr; }
+  .admin-time-grid { grid-template-columns: 1fr; }
+}
 .team-heading { margin-bottom: 2rem; }
 .team-form { margin-top: 1rem; }
 .team-list { display: grid; gap: .5rem; margin-top: 1.5rem; }

@@ -59,6 +59,7 @@ export function Header() {
             <>
               {user.role === 'player' && <NavLink to={myTeam ? '/team' : '/team/onboarding'} onClick={() => setMenuOpen(false)}>My team</NavLink>}
               {user.role === 'player' && <NavLink to="/teams" onClick={() => setMenuOpen(false)}>Teams</NavLink>}
+              {user.role === 'admin' && <NavLink to="/admin/event" onClick={() => setMenuOpen(false)}>Admin</NavLink>}
               <NavLink to="/profile" onClick={() => setMenuOpen(false)}>Profile</NavLink>
               <span className="header-user">{user.username}</span>
               <Button variant="ghost" loading={loggingOut} onClick={handleLogout}>Log out</Button>

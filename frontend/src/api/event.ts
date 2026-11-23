@@ -1,4 +1,4 @@
-import { apiGet } from './client'
+import { apiGet, apiPost, apiPut } from './client'
 
 export type EventState = 'draft_upcoming' | 'live' | 'paused' | 'ended'
 
@@ -57,4 +57,23 @@ export async function fetchEventStatus(signal?: AbortSignal): Promise<EventStatu
   const payload: unknown = await apiGet<unknown>(eventStatusUrl, { signal })
   if (!isEventStatus(payload)) throw new Error('Event status endpoint returned an invalid response')
   return payload
+}
+
+export type EventAuditEntry = {
+  id: string
+  action: string
+  target: string
+  created_at: string
+}
+
+export async function updateEventTimes(start: string | null, end: string | null) {
+  return apiPut<EventStatus>('/event/admin/times', { start, end })
+}
+
+export async function runEventAction(action: 'start' | 'pause' | 'resume' | 'end' | 'reset') {
+  return apiPost<EventStatus>(`/event/admin/${action}`)
+}
+
+export async function fetchEventAudit(signal?: AbortSignal) {
+  return apiGet<EventAuditEntry[]>('/event/admin/audit', { signal })
 }
