@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react'
 
 export type FieldErrorProps = HTMLAttributes<HTMLParagraphElement> & {
-  id: string
+  id?: string
 }
 
 export function FieldError({ id, className = '', ...props }: FieldErrorProps) {

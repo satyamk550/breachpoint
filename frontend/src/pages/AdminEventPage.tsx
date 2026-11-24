@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ApiError } from '../api/client'
+import { ApiError, getReadableApiError, getValidationErrors } from '../api/client'
 import { fetchEventAudit, runEventAction, updateEventTimes, type EventAuditEntry, type EventState } from '../api/event'
 import { useEventStatus } from '../hooks/useEventStatus'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, FieldError, Input, Label, Skeleton, Table, useToast } from '../components/ui'
@@ -50,6 +50,7 @@ export function AdminEventPage() {
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [timeError, setTimeError] = useState<string | null>(null)
+  const [timeFieldErrors, setTimeFieldErrors] = useState<Record<string, string[]>>({})
   const [activeAction, setActiveAction] = useState<Action | null>(null)
   const [saving, setSaving] = useState(false)
   const { showToast } = useToast()
@@ -71,6 +72,7 @@ export function AdminEventPage() {
 
   async function saveTimes() {
     setTimeError(null)
+    setTimeFieldErrors({})
     if (start && end && new Date(start) >= new Date(end)) {
       setTimeError('Event end must be after event start.')
       return
@@ -82,7 +84,9 @@ export function AdminEventPage() {
       await refreshAudit()
       showToast({ title: 'Schedule saved', description: 'Event times were updated.', variant: 'success' })
     } catch (error) {
-      setTimeError(error instanceof ApiError ? error.message : 'Unable to save event times.')
+      const mapped = getValidationErrors(error)
+      setTimeFieldErrors(mapped)
+      setTimeError(Object.keys(mapped).length ? null : getReadableApiError(error, 'Unable to save event times.'))
     } finally { setSaving(false) }
   }
 
@@ -113,7 +117,7 @@ export function AdminEventPage() {
         <Card className="admin-state-card"><span className="admin-state-label">Current state</span><Badge variant={state === 'live' ? 'success' : state === 'paused' ? 'warning' : state === 'ended' ? 'neutral' : 'info'} role="status">{stateLabel(state)}</Badge><span className="admin-state-time">Server time {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(statusQuery.data.server_time))}</span></Card>
       </section>
       <section className="admin-event-grid">
-        <Card><CardHeader><CardTitle>Schedule</CardTitle><CardDescription>Times are shown in your browser’s local time and sent to the server as UTC.</CardDescription></CardHeader><CardContent><div className="admin-time-grid"><div className="form-field"><Label htmlFor="event-start">Start time</Label><Input id="event-start" type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} aria-describedby={timeError ? 'event-time-error' : undefined} invalid={Boolean(timeError)} /></div><div className="form-field"><Label htmlFor="event-end">End time</Label><Input id="event-end" type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} aria-describedby={timeError ? 'event-time-error' : undefined} invalid={Boolean(timeError)} /></div></div>{timeError && <FieldError id="event-time-error">{timeError}</FieldError>}<Button className="admin-save-button" loading={saving} disabled={saving} onClick={() => void saveTimes()}>Save schedule</Button></CardContent></Card>
+        <Card><CardHeader><CardTitle>Schedule</CardTitle><CardDescription>Times are shown in your browser’s local time and sent to the server as UTC.</CardDescription></CardHeader><CardContent><div className="admin-time-grid"><div className="form-field"><Label htmlFor="event-start">Start time</Label><Input id="event-start" type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} aria-describedby={timeError ? 'event-time-error' : undefined} invalid={Boolean(timeError || timeFieldErrors.start)} />{timeFieldErrors.start?.map((error) => <FieldError key={error}>{error}</FieldError>)}</div><div className="form-field"><Label htmlFor="event-end">End time</Label><Input id="event-end" type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} aria-describedby={timeError ? 'event-time-error' : undefined} invalid={Boolean(timeError || timeFieldErrors.end)} />{timeFieldErrors.end?.map((error) => <FieldError key={error}>{error}</FieldError>)}</div></div>{timeError && <FieldError id="event-time-error">{timeError}</FieldError>}<Button className="admin-save-button" loading={saving} disabled={saving} onClick={() => void saveTimes()}>Save schedule</Button></CardContent></Card>
         <Card><CardHeader><CardTitle>Lifecycle actions</CardTitle><CardDescription>Each action changes what players can do immediately.</CardDescription></CardHeader><CardContent><div className="admin-action-list">{lifecycleActions.map((action) => <Button key={action} variant={actionCopy[action].variant} disabled={!canAction[action] || saving} onClick={() => setActiveAction(action)}>{actionCopy[action].label}</Button>)}{canAction.reset && <Button variant={actionCopy.reset.variant} disabled={saving} onClick={() => setActiveAction('reset')}>{actionCopy.reset.label}</Button>}</div><p className="warning-copy">After Resume, the scheduled end time is not enforced. Press End manually when the event is over.</p><dl className="admin-capabilities">{Object.entries(capabilities).map(([name, enabled]) => <div key={name}><dt>{name.replace(/_/g, ' ')}</dt><dd>{enabled ? 'Enabled' : 'Disabled'}</dd></div>)}</dl></CardContent></Card>
       </section>
       <section className="admin-audit-section" aria-labelledby="audit-title"><div className="section-header"><div><p className="eyebrow">Accountability</p><h2 className="section-title" id="audit-title">Recent changes</h2></div><span className="health-count">Last 10 event entries</span></div><Card className="admin-audit-card">{audit.length ? <AuditTable entries={audit} /> : <p className="admin-empty">No event changes recorded yet.</p>}</Card></section>

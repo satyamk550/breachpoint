@@ -322,3 +322,31 @@ docker compose --profile test run --rm backend-test
 - Regexes must compile and are rejected when they match conservative nested-quantifier or quantified-alternation backtracking shapes. Remaining patterns are timed against a 5,000-character adversarial string with a small validation budget.
 - Flag validation errors remove rejected flag input from 422 responses, and audit metadata continues to contain only IDs and action data.
 - Added boundary, nested-quantifier, normal-pattern, static-limit, error-secrecy, and audit-secrecy coverage. The previous regex-length xfail is now a normal passing test.
+
+## Phase 4a frontend
+
+### What was done
+
+- Added the player challenge board at `/challenges`, grouped by the backend's category order, with search, category tabs, solve metadata, solved state, loading skeletons, empty state, capability messaging, no-team onboarding redirect, and a focus-managed detail drawer.
+- Added admin challenge catalog and editor routes at `/admin/challenges`, `/admin/challenges/new`, and `/admin/challenges/:id/edit`, plus `/admin/categories`, using the exact backend challenge/category fields and routes. The editor includes sanitized DOMPurify Markdown preview, dynamic scoring fields, tags, prerequisites, flag masking, clone/bulk/delete controls, and clear server errors.
+- Added admin/player navigation links and MSW/Vitest coverage for grouping, search, bulk selection, delete confirmation, no-team redirect, all event-state messages, drawer 404 handling, and script-tag sanitization.
+- Added DOMPurify as the only new frontend runtime dependency. Flag text is held only in component state and is never written to localStorage or sessionStorage.
+
+### Verification
+
+- `npm.cmd run lint`: passed.
+- `npm.cmd run type-check`: passed.
+- `npm.cmd test -- --run`: **51 passed across 8 files**, with no xfail or failures.
+- `npm.cmd run build`: passed; Vite production bundle generated successfully.
+
+### Known contract gap
+
+- The existing backend `FlagResponse` schema intentionally omits `content`. The frontend therefore masks existing flag rows but cannot reveal or edit their stored text until the backend admin flag response provides that field. No backend change was made in this frontend-only phase.
+
+## Phase 4a admin editor follow-up
+
+- Added an empty-category state with `/admin/categories` guidance and an inline category creator that selects the new category.
+- FastAPI 422 details are now preserved by the frontend client and mapped to field-level messages in the challenge editor, category form, and event schedule form; unknown failures use readable summaries instead of `Unprocessable Entity`.
+- Challenge creation now keeps draft flags in component state, creates the challenge first, creates flags second, and applies the requested visibility last. Failed flag creation keeps the challenge and routes to its editor with an indexed error; flag text is never logged or stored in browser storage or URLs.
+- Added draft/static defaults, dynamic scoring help and client validation, visible-without-flags warnings, and the edit-page note that players need at least one flag.
+- Added 7 focused MSW tests for the editor follow-up. Final frontend verification: **58 tests passed across 9 files**, lint passed, type-check passed, and the production build passed.

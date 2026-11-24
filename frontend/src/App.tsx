@@ -12,6 +12,10 @@ import { TeamOnboardingPage } from './pages/TeamOnboardingPage'
 import { TeamPage } from './pages/TeamPage'
 import { TeamsPage } from './pages/TeamsPage'
 import { AdminEventPage } from './pages/AdminEventPage'
+import { ChallengesPage } from './pages/ChallengesPage'
+import { AdminChallengesPage } from './pages/AdminChallengesPage'
+import { AdminChallengeEditorPage } from './pages/AdminChallengeEditorPage'
+import { AdminCategoriesPage } from './pages/AdminCategoriesPage'
 
 function BrandMetadata() {
   useEffect(() => {
@@ -39,10 +43,15 @@ export default function App() {
               <Route path="team" element={<TeamPage />} />
             </Route>
             <Route element={<ProtectedRoute />}>
+              <Route path="challenges" element={<ChallengesPage />} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>
             <Route element={<AdminRoute />}>
               <Route path="admin/event" element={<AdminEventPage />} />
+              <Route path="admin/challenges" element={<AdminChallengesPage />} />
+              <Route path="admin/challenges/new" element={<AdminChallengeEditorPage />} />
+              <Route path="admin/challenges/:id/edit" element={<AdminChallengeEditorPage />} />
+              <Route path="admin/categories" element={<AdminCategoriesPage />} />
             </Route>
             <Route path="error" element={<ErrorPage />} />
             <Route path="*" element={<NotFoundPage />} />

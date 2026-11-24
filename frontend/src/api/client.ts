@@ -1,11 +1,18 @@
 const API_BASE_URL = '/api/v1'
 const DEFAULT_TIMEOUT_MS = 10_000
 
+export type ValidationDetail = {
+  loc?: Array<string | number>
+  msg?: string
+  type?: string
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
     public readonly retryAfter?: number,
+    public readonly validationDetails: ValidationDetail[] = [],
   ) {
     super(message)
     this.name = 'ApiError'
@@ -23,9 +30,29 @@ type ApiRequestOptions = Omit<RequestInit, 'body' | 'credentials' | 'signal'> & 
 function getErrorMessage(payload: unknown, fallback: string): string {
   if (typeof payload !== 'object' || payload === null) return fallback
   const candidate = payload as Record<string, unknown>
+  if (Array.isArray(candidate.detail)) return 'Validation failed. Check the highlighted fields.'
   if (typeof candidate.detail === 'string') return candidate.detail
   if (typeof candidate.message === 'string') return candidate.message
   return fallback
+}
+
+export function getValidationErrors(error: unknown): Record<string, string[]> {
+  if (!(error instanceof ApiError)) return {}
+  const errors: Record<string, string[]> = {}
+  for (const detail of error.validationDetails) {
+    const location = detail.loc ?? []
+    const fieldParts = location.filter((part) => typeof part === 'string' && part !== 'body')
+    const field = fieldParts[fieldParts.length - 1]
+    const message = typeof detail.msg === 'string' ? detail.msg : 'Invalid value.'
+    if (!field) continue
+    errors[field] = [...(errors[field] ?? []), message]
+  }
+  return errors
+}
+
+export function getReadableApiError(error: unknown, fallback = 'Unable to save changes.') {
+  if (error instanceof ApiError) return error.message || fallback
+  return error instanceof Error ? error.message : fallback
 }
 
 function getCookie(name: string): string | undefined {
@@ -87,6 +114,9 @@ export async function apiRequest<T>(
       const retryAfter = response.status === 429
         ? Number(response.headers.get('Retry-After') ?? 0) || undefined
         : undefined
+      const validationDetails = typeof payload === 'object' && payload !== null && Array.isArray((payload as Record<string, unknown>).detail)
+        ? ((payload as Record<string, unknown>).detail as ValidationDetail[])
+        : []
       const message = retryAfter
         ? `Too many requests. Try again in ${retryAfter} seconds.`
         : getErrorMessage(payload, response.statusText || 'Request failed')
@@ -104,7 +134,7 @@ export async function apiRequest<T>(
           window.dispatchEvent(new PopStateEvent('popstate'))
         }
       }
-      throw new ApiError(response.status, message, retryAfter)
+      throw new ApiError(response.status, message, retryAfter, validationDetails)
     }
     if (responseText && payload === undefined) {
       throw new ApiError(response.status, 'The API returned invalid JSON')
