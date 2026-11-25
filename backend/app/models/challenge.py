@@ -1,4 +1,5 @@
 import uuid
+# ruff: noqa: E501, I001
 from datetime import datetime
 
 from sqlalchemy import (
@@ -117,3 +118,36 @@ class Solve(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     __table_args__ = (UniqueConstraint("team_id", "challenge_id", name="uq_solves_team_challenge"),)
+
+
+class Hint(Base):
+    __tablename__ = "hints"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    challenge_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("challenges.id", ondelete="CASCADE"), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    cost: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    requires_hint_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("hints.id", ondelete="RESTRICT"), nullable=True)
+    __table_args__ = (CheckConstraint("cost >= 0", name="ck_hints_cost_nonnegative"),)
+
+
+class HintUnlock(Base):
+    __tablename__ = "hint_unlocks"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    team_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    hint_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("hints.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    __table_args__ = (UniqueConstraint("team_id", "hint_id", name="uq_hint_unlocks_team_hint"),)
+
+
+class ChallengeFile(Base):
+    __tablename__ = "challenge_files"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    challenge_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("challenges.id", ondelete="CASCADE"), nullable=False)
+    storage_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    original_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

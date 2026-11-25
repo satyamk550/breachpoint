@@ -1,4 +1,5 @@
 from __future__ import annotations
+# ruff: noqa: E501, I001
 
 import uuid
 
@@ -10,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import require_admin, require_capability
 from app.core.db import get_session
 from app.models.audit_log import AuditLog
-from app.models.challenge import Category, Challenge, ChallengePrerequisite, Flag, Solve, Tag
+from app.models.challenge import Category, Challenge, ChallengeFile, ChallengePrerequisite, Flag, Hint, HintUnlock, Solve, Tag
 from app.models.user import User
 from app.schemas.challenges import (
     CategoryResponse,
@@ -20,6 +21,9 @@ from app.schemas.challenges import (
     ChallengeResponse,
     ChallengeWrite,
     FlagWrite,
+    FlagResponse,
+    FileResponse,
+    PlayerHintResponse,
     PlayerChallengeResponse,
     VisibilityChange,
 )
@@ -169,6 +173,10 @@ async def player_challenge_response(
     solved = await session.scalar(
         select(Solve.id).where(Solve.challenge_id == challenge.id, Solve.team_id == team_id)
     )
+    hints = (await session.scalars(select(Hint).where(Hint.challenge_id == challenge.id).order_by(Hint.sort_order, Hint.id))).all()
+    unlocked = set((await session.scalars(select(HintUnlock.hint_id).where(HintUnlock.team_id == team_id, HintUnlock.hint_id.in_([h.id for h in hints])))).all()) if hints else set()
+    hint_responses = [PlayerHintResponse(id=h.id, cost=h.cost, sort_order=h.sort_order, requires_hint_id=h.requires_hint_id, content=h.content if h.id in unlocked else None, unlocked=h.id in unlocked) for h in hints]
+    files = (await session.scalars(select(ChallengeFile).where(ChallengeFile.challenge_id == challenge.id).order_by(ChallengeFile.created_at, ChallengeFile.id))).all()
     return PlayerChallengeResponse(
         id=challenge.id,
         title=challenge.title,
@@ -179,6 +187,8 @@ async def player_challenge_response(
         tags=tags,
         solve_count=count,
         solved_by_my_team=solved is not None,
+        hints=hint_responses,
+        files=[FileResponse.model_validate(file) for file in files],
     )
 
 
@@ -324,6 +334,14 @@ async def admin_list_challenges(
         await admin_challenge_response(session, item)
         for item in (await session.scalars(select(Challenge).order_by(Challenge.created_at))).all()
     ]
+
+
+@router.get("/admin/challenges/health")
+async def admin_challenge_health(
+    _admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)
+) -> dict:
+    from app.services.challenge_health import build_challenge_health
+    return await build_challenge_health(session)
 
 
 @router.get("/admin/challenges/{challenge_id}", response_model=ChallengeResponse)
@@ -483,7 +501,7 @@ async def admin_clone_challenge(
     return await admin_challenge_response(session, clone)
 
 
-@router.get("/admin/challenges/{challenge_id}/flags", response_model=list[dict])
+@router.get("/admin/challenges/{challenge_id}/flags", response_model=list[FlagResponse])
 async def admin_list_flags(
     challenge_id: uuid.UUID,
     _admin: User = Depends(require_admin),
@@ -491,12 +509,7 @@ async def admin_list_flags(
 ) -> list[dict]:
     await challenge_or_404(session, challenge_id)
     return [
-        {
-            "id": flag.id,
-            "type": flag.type,
-            "content": flag.content,
-            "case_insensitive": flag.case_insensitive,
-        }
+        flag
         for flag in (
             await session.scalars(select(Flag).where(Flag.challenge_id == challenge_id))
         ).all()

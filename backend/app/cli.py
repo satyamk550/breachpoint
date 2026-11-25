@@ -25,6 +25,16 @@ async def create_admin() -> None:
     print("Admin created.")
 
 
+async def check_challenges() -> None:
+    from app.services.challenge_health import build_challenge_health
+    async with AsyncSessionLocal() as session:
+        report = await build_challenge_health(session)
+    for key, values in report.items():
+        print(f"{key}: {len(values)}")
+        for value in values:
+            print(f"  {value}")
+
+
 async def _exists(username: str, email: str) -> bool:
     async with AsyncSessionLocal() as session:
         return (
@@ -39,6 +49,6 @@ async def _exists(username: str, email: str) -> bool:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] != "create-admin":
-        raise SystemExit("Usage: python -m app.cli create-admin")
-    asyncio.run(create_admin())
+    if len(sys.argv) != 2 or sys.argv[1] not in {"create-admin", "check-challenges"}:
+        raise SystemExit("Usage: python -m app.cli create-admin|check-challenges")
+    asyncio.run(create_admin() if sys.argv[1] == "create-admin" else check_challenges())

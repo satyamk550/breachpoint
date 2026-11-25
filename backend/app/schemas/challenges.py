@@ -174,6 +174,56 @@ class PlayerChallengeResponse(BaseModel):
     tags: list[str] = Field(default_factory=list)
     solve_count: int
     solved_by_my_team: bool
+    hints: list["PlayerHintResponse"] = Field(default_factory=list)
+    files: list["FileResponse"] = Field(default_factory=list)
+
+
+class HintWrite(BaseModel):
+    content: str = Field(min_length=1, max_length=20000)
+    cost: int = Field(default=0, ge=0)
+    sort_order: int = Field(default=0, ge=0)
+    requires_hint_id: uuid.UUID | None = None
+
+    @field_validator("content")
+    @classmethod
+    def trim_content(cls, value: str) -> str:
+        return nonblank(value)
+
+
+class HintAdminResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    challenge_id: uuid.UUID
+    content: str
+    cost: int
+    sort_order: int
+    requires_hint_id: uuid.UUID | None
+
+
+class HintListResponse(BaseModel):
+    id: uuid.UUID
+    challenge_id: uuid.UUID
+    cost: int
+    sort_order: int
+    requires_hint_id: uuid.UUID | None
+
+
+class PlayerHintResponse(BaseModel):
+    id: uuid.UUID
+    cost: int
+    sort_order: int
+    requires_hint_id: uuid.UUID | None = None
+    content: str | None = None
+    unlocked: bool = False
+
+
+class FileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    original_name: str
+    size_bytes: int
+    content_type: str
+    sha256: str
 
 
 class ChallengeGroup(BaseModel):

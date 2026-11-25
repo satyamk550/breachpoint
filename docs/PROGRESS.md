@@ -350,3 +350,27 @@ docker compose --profile test run --rm backend-test
 - Challenge creation now keeps draft flags in component state, creates the challenge first, creates flags second, and applies the requested visibility last. Failed flag creation keeps the challenge and routes to its editor with an indexed error; flag text is never logged or stored in browser storage or URLs.
 - Added draft/static defaults, dynamic scoring help and client validation, visible-without-flags warnings, and the edit-page note that players need at least one flag.
 - Added 7 focused MSW tests for the editor follow-up. Final frontend verification: **58 tests passed across 9 files**, lint passed, type-check passed, and the production build passed.
+
+## Phase 4b - Hints, secure files, scoring contract, and challenge health
+
+### What was done
+
+- Added migration `0006` from `0005` for hints, idempotent team hint unlocks, and challenge file metadata.
+- Added CSRF-protected admin hint CRUD and secure file upload/delete endpoints. Hint audit metadata never contains hint content; file storage uses random names outside public directories.
+- Added player hint unlocks gated by lifecycle capability, team membership, challenge visibility/prerequisites, and hint prerequisite ordering. Unlocks use a database unique constraint and conflict-safe insert; no score is changed.
+- Added player challenge hint/file projections, with hint content visible only after that team unlocks it, and secure authenticated downloads with sanitized attachment names and `nosniff`.
+- Added the admin challenge health endpoint and `python -m app.cli check-challenges`, reporting missing flags, missing or mismatched files, invalid scoring bounds, prerequisite cycles, and visible zero-point challenges without exposing flag or hint contents.
+- Added `docs/SCORING.md` as the Phase 5 scoring contract; no submissions, grading, score totals, or score events were implemented.
+
+### How to run
+
+```bash
+docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test build backend-test
+docker compose --profile test run --rm backend-test alembic upgrade head
+docker compose --profile test run --rm backend-test
+```
+
+### What is next
+
+**Phase 5** - Submissions, scoring, score events, hint costs, first blood, and awards.

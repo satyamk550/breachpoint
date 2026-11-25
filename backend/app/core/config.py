@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     join_ip_limit: int = 10
     join_window_seconds: int = 900
     lifecycle_clock_timezone: str = "UTC"
+    file_storage_dir: str = "storage/challenge-files"
+    file_upload_max_bytes: int = 25 * 1024 * 1024
 
 
 settings = Settings()
