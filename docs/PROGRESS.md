@@ -353,6 +353,24 @@ docker compose --profile test run --rm backend-test
 
 ## Phase 4b - Hints, secure files, scoring contract, and challenge health
 
+### Frontend implementation follow-up
+
+- Added player hint and authenticated file sections to the challenge detail drawer. Hint unlocks use the exact lifecycle capability and `/hints/{hint_id}/unlock` route, with prerequisite messaging, idempotent state updates, a cost confirmation dialog, 404/no-team/error states, and sanitized Markdown content.
+- Added admin hint create/edit/reorder/delete controls, authenticated file upload with progress state and server 413 error display, and the `/admin/challenges/health` page linked from the challenge catalog.
+- Added typed API wrappers for the Phase 4b schemas and an authenticated binary download helper. Hint and flag content remain component-local; no browser storage or URL state is used.
+
+### Frontend verification
+
+- `npm.cmd run type-check`: passed.
+- `npm.cmd run lint`: passed.
+- Vitest and Vite were invoked with the project toolchain, but this environment stalled after the Vite `RUN`/`building for production` banner before emitting counts. The earlier Phase 4a baseline remains 58 passing tests across 9 files; no new count is claimed here.
+
+### Frontend contract gaps (backend unchanged by request)
+
+- `GET /admin/challenges/{challenge_id}/hints` returns `HintListResponse`, which omits `content`; editing an existing hint cannot preload its Markdown safely until an admin read response includes content.
+- There is no admin list endpoint for challenge files, and `ChallengeResponse` does not include files. The frontend can upload and player-download/delete by known file ID, but cannot render the complete admin file list or map file-health IDs back to their owning challenge without that read contract.
+- The backend does not expose `file_upload_max_bytes` through an endpoint; the UI therefore displays that the server-enforced limit applies and surfaces the exact oversized-file response.
+
 ### What was done
 
 - Added migration `0006` from `0005` for hints, idempotent team hint unlocks, and challenge file metadata.

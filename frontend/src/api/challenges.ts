@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from './client'
+import { apiDelete, apiDownload, apiGet, apiPatch, apiPost } from './client'
 
 export type Visibility = 'draft' | 'visible' | 'hidden'
 export type ScoringMode = 'static' | 'dynamic'
@@ -26,10 +26,18 @@ export type Challenge = {
   prerequisites: Prerequisite[]
   solve_count: number
   solved_by_my_team: boolean
+  hints?: PlayerHint[]
+  files?: ChallengeFile[]
 }
 export type ChallengeGroup = { category_id: string; category_name: string; sort_order: number; challenges: Challenge[] }
 export type Flag = { id: string; type: FlagType; content?: string; case_insensitive: boolean }
 export type FlagWrite = { type: FlagType; content: string; case_insensitive: boolean }
+export type PlayerHint = { id: string; cost: number; sort_order: number; requires_hint_id: string | null; content: string | null; unlocked: boolean }
+export type HintAdmin = { id: string; challenge_id: string; content: string; cost: number; sort_order: number; requires_hint_id: string | null }
+export type HintList = Omit<HintAdmin, 'content'> & { content?: string }
+export type HintWrite = { content: string; cost: number; sort_order: number; requires_hint_id: string | null }
+export type ChallengeFile = { id: string; original_name: string; size_bytes: number; content_type: string; sha256: string }
+export type ChallengeHealth = { no_active_flag: string[]; missing_files: string[]; file_sha256_mismatch: string[]; invalid_scoring_bounds: string[]; prerequisite_cycles: string[]; visible_zero_points: string[] }
 
 export type ChallengeInput = {
   title: string
@@ -66,3 +74,12 @@ export function listFlags(id: string) { return apiGet<Flag[]>(`/admin/challenges
 export function createFlag(id: string, input: FlagWrite) { return apiPost<Flag>(`/admin/challenges/${id}/flags`, input) }
 export function updateFlag(challengeId: string, flagId: string, input: Partial<FlagWrite>) { return apiPatch<Flag>(`/admin/challenges/${challengeId}/flags/${flagId}`, input) }
 export function deleteFlag(challengeId: string, flagId: string) { return apiDelete<void>(`/admin/challenges/${challengeId}/flags/${flagId}`) }
+export function listHints(id: string) { return apiGet<HintList[]>(`/admin/challenges/${id}/hints`) }
+export function createHint(id: string, input: HintWrite) { return apiPost<HintAdmin>(`/admin/challenges/${id}/hints`, input) }
+export function updateHint(id: string, input: HintWrite) { return apiPatch<HintAdmin>(`/admin/hints/${id}`, input) }
+export function deleteHint(id: string) { return apiDelete<void>(`/admin/hints/${id}`) }
+export function unlockHint(id: string) { return apiPost<PlayerHint>(`/hints/${id}/unlock`) }
+export function uploadChallengeFile(challengeId: string, file: File) { const body = new FormData(); body.append('upload', file); return apiPost<ChallengeFile>(`/admin/challenges/${challengeId}/files`, body) }
+export function deleteChallengeFile(id: string) { return apiDelete<void>(`/admin/files/${id}`) }
+export function downloadChallengeFile(id: string) { return apiDownload(`/files/${id}`) }
+export function getChallengeHealth() { return apiGet<ChallengeHealth>('/admin/challenges/health') }

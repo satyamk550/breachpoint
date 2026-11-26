@@ -83,7 +83,7 @@ export async function apiRequest<T>(
 
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (options.body !== undefined && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes((requestOptions.method ?? 'GET').toUpperCase())) {
     const csrfToken = getCookie('csrf_token')
     if (csrfToken) headers.set('X-CSRF-Token', csrfToken)
@@ -95,7 +95,7 @@ export async function apiRequest<T>(
     const response = await fetch(url, {
       ...requestOptions,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
       credentials: 'include',
       signal: controller.signal,
     })
@@ -172,4 +172,20 @@ export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
 
 export function apiDelete<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: 'DELETE' })
+}
+
+export async function apiDownload(path: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
+    credentials: 'include',
+    headers: { Accept: '*/*' },
+  })
+  if (!response.ok) {
+    let message = response.statusText || 'Download failed'
+    try {
+      const payload = await response.json() as { detail?: string }
+      if (payload.detail) message = payload.detail
+    } catch { /* binary/error responses are allowed */ }
+    throw new ApiError(response.status, message)
+  }
+  return response.blob()
 }

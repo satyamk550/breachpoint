@@ -10,6 +10,16 @@ A self-hosted Capture The Flag platform for up to 25 teams and ~100 players.
 | Frontend | React 18 · Vite · TypeScript · Tailwind CSS |
 | Infra    | Docker Compose · Caddy                      |
 
+## Phase status
+
+| Phase | Status |
+|---|---|
+| 1–3 | Complete |
+| 4a | Complete |
+| 4b backend | Complete |
+| 4b frontend | In progress — player hints/files, admin hint editing, upload, and health route added; file listing/editing awaits a backend read contract |
+| 5+ | Not started |
+
 ## Quick Start (Docker)
 
 ```bash
