@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     join_user_limit: int = 5
     join_ip_limit: int = 10
     join_window_seconds: int = 900
+    submit_attempt_limit: int = 10
+    submit_window_seconds: int = 60
     lifecycle_clock_timezone: str = "UTC"
     file_storage_dir: str = "storage/challenge-files"
     file_upload_max_bytes: int = 25 * 1024 * 1024

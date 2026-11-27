@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.core.db import get_session
 from app.models.audit_log import AuditLog
 from app.models.challenge import ChallengeFile, Hint, HintUnlock
+from app.models.scoring import ScoreEvent
 from app.models.user import User
 from app.schemas.challenges import HintAdminResponse, HintListResponse, HintWrite
 from app.api.v1.challenges import challenge_or_404, eligible
@@ -138,7 +139,9 @@ async def unlock_hint(hint_id: uuid.UUID, user: User = Depends(require_capabilit
     if hint.requires_hint_id is not None and not await session.scalar(select(HintUnlock.id).where(HintUnlock.team_id == user.team_id, HintUnlock.hint_id == hint.requires_hint_id)):
         raise HTTPException(status_code=409, detail="Required hint has not been unlocked")
     stmt = insert(HintUnlock).values(team_id=user.team_id, user_id=user.id, hint_id=hint.id).on_conflict_do_nothing(index_elements=["team_id", "hint_id"])
-    await session.execute(stmt)
+    inserted = (await session.execute(stmt.returning(HintUnlock.id))).scalar_one_or_none()
+    if inserted is not None:
+        session.add(ScoreEvent(team_id=user.team_id, kind="hint", delta=-hint.cost))
     await session.commit()
     return {"id": hint.id, "content": hint.content, "cost": hint.cost, "sort_order": hint.sort_order, "unlocked": True}
 

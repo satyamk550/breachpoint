@@ -18,7 +18,8 @@ A self-hosted Capture The Flag platform for up to 25 teams and ~100 players.
 | 4a | Complete |
 | 4b backend | Complete |
 | 4b frontend | In progress — player hints/files, admin hint editing, upload, and health route added; file listing/editing awaits a backend read contract |
-| 5+ | Not started |
+| 5 | Complete |
+| 6+ | Not started |
 
 ## Quick Start (Docker)
 

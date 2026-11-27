@@ -1,4 +1,4 @@
-# ruff: noqa: E501
+# ruff: noqa: E501, I001
 
 from __future__ import annotations
 
@@ -33,6 +33,9 @@ from app.schemas.teams import (
     TeamSummary,
     UserTargetRequest,
 )
+from app.schemas.scoring import TeamScoreResponse, SolvedChallengeResponse
+from app.services.scoring import current_value, team_score
+from app.models.challenge import Challenge, Solve
 from app.services.lifecycle import read_lifecycle_config
 
 router = APIRouter(prefix="/teams", tags=["teams"])
@@ -161,6 +164,40 @@ async def my_team(user: User = Depends(require_user), session: AsyncSession = De
     if user.team_id is None:
         return None
     return await _response(session, await _team_or_404(session, user.team_id))
+
+
+@router.get("/me/score", response_model=TeamScoreResponse)
+async def my_score(
+    user: User = Depends(require_user), session: AsyncSession = Depends(get_session)
+) -> TeamScoreResponse:
+    if user.team_id is None:
+        raise HTTPException(status_code=403, detail="You must be in a team to view your score")
+    score = await team_score(session, user.team_id)
+    rows = (
+        await session.execute(
+            select(Solve, Challenge)
+            .join(Challenge, Challenge.id == Solve.challenge_id)
+            .where(Solve.team_id == user.team_id)
+            .order_by(Solve.created_at, Solve.id)
+        )
+    ).all()
+    counts = dict(
+        (challenge_id, int(count))
+        for challenge_id, count in (
+            await session.execute(select(Solve.challenge_id, func.count(Solve.id)).group_by(Solve.challenge_id))
+        ).all()
+    )
+    return TeamScoreResponse(
+        score=score,
+        solved_challenges=[
+            SolvedChallengeResponse(
+                id=challenge.id,
+                title=challenge.title,
+                current_value=current_value(challenge, counts[solve.challenge_id]),
+            )
+            for solve, challenge in rows
+        ],
+    )
 
 
 @router.get("", response_model=list[TeamSummary])

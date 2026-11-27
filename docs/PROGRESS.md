@@ -393,3 +393,34 @@ docker compose --profile test run --rm backend-test
 ### What is next
 
 **Phase 5** - Submissions, scoring, score events, hint costs, first blood, and awards.
+
+## Phase 5 - Submissions and scoring
+
+### What was done
+
+- Added migration `0007` with submissions, awards, append-only score events, and first-blood tracking.
+- Added CSRF-protected player submission grading with visibility, team, lifecycle, attempt, rate-limit, static constant-time, and bounded regex checks.
+- Added live score computation, linear/logarithmic challenge values, hint-cost events, awards, first blood, and admin submission/solve adjustment routes.
+- Added team score and solved-challenge projection; the public scoreboard remains Phase 6.
+
+### How to run
+
+```bash
+docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test build backend-test
+docker compose --profile test run --rm backend-test alembic upgrade head
+docker compose --profile test run --rm backend-test
+docker compose --profile test run --rm backend-test ruff check app tests
+```
+
+### Verification
+
+- Backend suite: **68 passed**, with no xfail or failures.
+- Ruff: `All checks passed!`.
+- Alembic heads: exactly one head, `0007 (head)`.
+- Mutation checks: first-blood locking, response secrecy, lifecycle capability, and max attempts each failed their focused test as intended. A lock-bypassed teammate race now exercises the unique-constraint fallback; removing the `IntegrityError` catch failed that focused test as intended.
+- Concurrency tests use separate HTTP clients, `asyncio.gather`, and explicit barriers. Paused/non-live submissions are verified to stop before flag matching and before attempt rows are consumed. Regex timeout handling is verified against an existing stored regex row.
+
+### What is next
+
+**Phase 6** - Public scoreboard, SSE realtime updates, freeze, projector page, and statistics.

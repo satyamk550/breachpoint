@@ -161,6 +161,7 @@ class ChallengeResponse(BaseModel):
     tags: list[str] = Field(default_factory=list)
     prerequisites: list[uuid.UUID] = Field(default_factory=list)
     solve_count: int = 0
+    current_value: int = 0
     solved_by_my_team: bool = False
 
 
@@ -173,6 +174,7 @@ class PlayerChallengeResponse(BaseModel):
     connection_info: str | None
     tags: list[str] = Field(default_factory=list)
     solve_count: int
+    current_value: int
     solved_by_my_team: bool
     hints: list["PlayerHintResponse"] = Field(default_factory=list)
     files: list["FileResponse"] = Field(default_factory=list)

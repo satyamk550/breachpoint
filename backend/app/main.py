@@ -9,6 +9,7 @@ from app.api.v1.event import router as event_router
 from app.api.v1.health import router as health_router
 from app.api.v1.teams import router as teams_router
 from app.api.v1.phase4b import router as phase4b_router
+from app.api.v1.scoring import router as scoring_router
 from app.middleware import CSRFMiddleware
 
 
@@ -20,6 +21,7 @@ def create_app() -> FastAPI:
     app.include_router(teams_router, prefix="/api/v1")
     app.include_router(challenges_router, prefix="/api/v1")
     app.include_router(phase4b_router, prefix="/api/v1")
+    app.include_router(scoring_router, prefix="/api/v1")
     app.add_middleware(CSRFMiddleware)
 
     @app.exception_handler(RequestValidationError)
@@ -27,7 +29,7 @@ def create_app() -> FastAPI:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         errors = exc.errors()
-        if "/flags" in request.url.path:
+        if "/flags" in request.url.path or request.url.path.endswith("/submit"):
             errors = [
                 {key: value for key, value in error.items() if key != "input"} for error in errors
             ]

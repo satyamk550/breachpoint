@@ -117,6 +117,7 @@ class Solve(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    is_first_blood: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     __table_args__ = (UniqueConstraint("team_id", "challenge_id", name="uq_solves_team_challenge"),)
 
 

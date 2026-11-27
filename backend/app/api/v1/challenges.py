@@ -13,6 +13,7 @@ from app.core.db import get_session
 from app.models.audit_log import AuditLog
 from app.models.challenge import Category, Challenge, ChallengeFile, ChallengePrerequisite, Flag, Hint, HintUnlock, Solve, Tag
 from app.models.user import User
+from app.services.scoring import current_value
 from app.schemas.challenges import (
     CategoryResponse,
     CategoryWrite,
@@ -156,7 +157,12 @@ async def admin_challenge_response(
         or 0
     )
     return ChallengeResponse.model_validate(challenge).model_copy(
-        update={"tags": tags, "prerequisites": prereqs, "solve_count": count}
+        update={
+            "tags": tags,
+            "prerequisites": prereqs,
+            "solve_count": count,
+            "current_value": current_value(challenge, count),
+        }
     )
 
 
@@ -186,6 +192,7 @@ async def player_challenge_response(
         connection_info=challenge.connection_info,
         tags=tags,
         solve_count=count,
+        current_value=current_value(challenge, count),
         solved_by_my_team=solved is not None,
         hints=hint_responses,
         files=[FileResponse.model_validate(file) for file in files],
@@ -532,7 +539,6 @@ async def admin_create_flag(
     return {
         "id": flag.id,
         "type": flag.type,
-        "content": flag.content,
         "case_insensitive": flag.case_insensitive,
     }
 
@@ -558,7 +564,6 @@ async def admin_update_flag(
     return {
         "id": flag.id,
         "type": flag.type,
-        "content": flag.content,
         "case_insensitive": flag.case_insensitive,
     }
 
