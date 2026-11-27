@@ -1,9 +1,9 @@
 import re
-import time
 import uuid
 from datetime import datetime
 from typing import Literal
 
+import regex
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -109,12 +109,12 @@ class FlagWrite(BaseModel):
         if len(self.content) > 200:
             raise ValueError("regex flag patterns must be 200 characters or fewer")
         try:
-            compiled = re.compile(self.content)
-        except re.error as exc:
+            compiled = regex.compile(self.content)
+        except regex.error as exc:
             raise ValueError("invalid regex flag pattern") from exc
 
-        # Keep this deliberately conservative: reject common catastrophic-backtracking
-        # shapes, then time a bounded adversarial search before storing the pattern.
+        # Reject common catastrophic-backtracking shapes, then use regex's timeout on
+        # a bounded adversarial search so validation cannot block the server.
         nested_quantifier = re.search(
             r"\((?:[^()\\]|\\.)*(?:[+*]|\{\d+(?:,\d*)?\})(?:[^()\\]|\\.)*\)"
             r"(?:[+*]|\{\d+(?:,\d*)?\})",
@@ -127,9 +127,9 @@ class FlagWrite(BaseModel):
         if nested_quantifier or quantified_alternation:
             raise ValueError("regex flag pattern is too expensive to match")
         test_string = "a" * 4999 + "!"
-        started = time.perf_counter()
-        compiled.search(test_string)
-        if time.perf_counter() - started > 0.05:
+        try:
+            compiled.search(test_string, timeout=0.05)
+        except TimeoutError:
             raise ValueError("regex flag pattern is too expensive to match")
         return self
 

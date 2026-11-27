@@ -271,6 +271,8 @@ async def test_regex_length_validation_is_explicit(client, db_session):
         headers=headers,
     )
     assert too_long.status_code == 422
+    assert "regex flag patterns must be 200 characters or fewer" in too_long.text
+    assert too_long_pattern not in too_long.text
     nested_pattern = "(a+)+$"
     nested = await client.post(
         f"/api/v1/admin/challenges/{challenge['id']}/flags",
@@ -278,7 +280,38 @@ async def test_regex_length_validation_is_explicit(client, db_session):
         headers=headers,
     )
     assert nested.status_code == 422
-    for pattern in (too_long_pattern, nested_pattern, static_501_pattern):
+    assert "regex flag pattern is too expensive to match" in nested.text
+    assert nested_pattern not in nested.text
+    update_target = await client.post(
+        f"/api/v1/admin/challenges/{challenge['id']}/flags",
+        json={"type": "static", "content": "safe-static"},
+        headers=headers,
+    )
+    assert update_target.status_code == 201
+    update_flag_id = update_target.json()["id"]
+    edit_200 = await client.patch(
+        f"/api/v1/admin/challenges/{challenge['id']}/flags/{update_flag_id}",
+        json={"type": "regex", "content": exact_200},
+        headers=headers,
+    )
+    assert edit_200.status_code == 200
+    edit_201_pattern = "b" * 201
+    edit_201 = await client.patch(
+        f"/api/v1/admin/challenges/{challenge['id']}/flags/{update_flag_id}",
+        json={"type": "regex", "content": edit_201_pattern},
+        headers=headers,
+    )
+    assert edit_201.status_code == 422
+    assert "regex flag patterns must be 200 characters or fewer" in edit_201.text
+    assert edit_201_pattern not in edit_201.text
+    assert (
+        await client.patch(
+            f"/api/v1/admin/challenges/{challenge['id']}/flags/{update_flag_id}",
+            json={"type": "regex", "content": nested_pattern},
+            headers=headers,
+        )
+    ).status_code == 422
+    for pattern in (too_long_pattern, nested_pattern, edit_201_pattern, static_501_pattern):
         assert pattern not in too_long.text
         assert pattern not in nested.text
         assert pattern not in static_501.text
@@ -286,7 +319,7 @@ async def test_regex_length_validation_is_explicit(client, db_session):
     assert all(
         pattern not in str(row.meta)
         for row in rows
-        for pattern in (too_long_pattern, nested_pattern, static_501_pattern)
+        for pattern in (too_long_pattern, nested_pattern, edit_201_pattern, static_501_pattern)
     )
 
 
